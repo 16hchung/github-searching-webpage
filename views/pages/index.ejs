@@ -1,66 +1,133 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <% include ../partials/header.ejs %>
+	<% include ../partials/header.ejs %>
+	<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
+	<script type="text/javascript">
+		// CONSTANTS...
+		// Html...
+		const INPUT_ID = "github-username-input";
+		const PROFILE_IMG_ID = "profile-img";
+		const REPOS_LIST_ID = "repos-list";
+		const REPOS_HEADER_ID = "repos-header";
+
+		const SRC_ATTR = "src";
+		const TYPE_EVENT = "keyup";
+		const ENTER_KEYCODE = 13;
+		// Json...
+		const JSON_NAME_KEY = "name";
+		const JSON_OWNER_KEY = "owner";
+		const JSON_IMG_KEY = "avatar_url";
+
+		$(function(){
+
+			// set typing listener on username input
+			$(`#${INPUT_ID}`).on(TYPE_EVENT, function (e) {
+				if (e.keyCode == ENTER_KEYCODE) { // if user hits enter key, then send request
+
+					var input = $(e.currentTarget);
+					var username = input.val();
+					makeGithubRequest(username, function (data) {
+						// glean relevant info from response
+						var repos = repoArrayFromJson(data);
+						// user has no info if repos is empty, so just return
+						if (!repos.length) {
+							input.val("");
+							return;
+						}
+						var imgSrc = imgSrcFromJson(data);
+						// update html elements
+						$(`#${REPOS_HEADER_ID}`).text(`${username}'s Repositories...`);
+						$(`#${PROFILE_IMG_ID}`).attr(SRC_ATTR, imgSrc);
+						populateRepoList(repos);
+					});
+				}
+			});
+
+			function makeGithubRequest(username, onSuccess) {
+				$.ajax({
+					url: `https://api.github.com/users/${username}/repos`,
+					type: "get",
+					error: function(XMLHttpRequest, textStatus, errorThrown){
+						alert("Could not load information for that username. Please try again.");
+					},
+					success: function(data){
+						onSuccess(data);
+					}
+				});
+			}
+
+			function repoArrayFromJson(json) {
+				// check for user with no repos
+				if (!json.length) {
+					alert("This user has no repositories nor profile image. Please try again.");
+					return [];
+				}
+				// create array of repo names from json
+				var repos = [];
+				for (var i = 0; i < json.length; i++) {
+					var repoJson = json[i];
+					repos.push(repoJson[JSON_NAME_KEY]);
+				}
+				return repos;
+			}
+
+			function imgSrcFromJson(json) {
+				// arbitrarily use first repo to grab profile img
+				var firstRepo = json[0];
+				var imgSrc = firstRepo[JSON_OWNER_KEY][JSON_IMG_KEY];
+				return imgSrc;
+			}
+
+			function populateRepoList(repos) {
+				var repoListElem = $(`#${REPOS_LIST_ID}`)
+				repoListElem.empty();
+				for (var i = 0; i < repos.length; i++) {
+					var repoName = repos[i];
+					var newLiHTML = `<li class="list-group-item">${repoName}</li>`;
+					repoListElem.append(newLiHTML);
+				}
+			}
+
+		});
+	</script>
+
 </head>
 
 <body>
 
-  <% include ../partials/nav.ejs %>
-
-<div class="jumbotron text-center">
-  <div class="container">
-    <a href="/" class="lang-logo">
-      <img src="/lang-logo.png">
-    </a>
-    <h1>Getting Started with Node on Heroku v1.0 dev branch</h1>
-    <p>This is a sample Node application deployed to Heroku. It's a reasonably simple app - but a good foundation for understanding how to get the most out of the Heroku platform.</p>
-    <a type="button" class="btn btn-lg btn-default" href="https://devcenter.heroku.com/articles/getting-started-with-nodejs"><span class="glyphicon glyphicon-flash"></span> Getting Started with Node</a>
-    <a type="button" class="btn btn-lg btn-primary" href="https://github.com/heroku/node-js-getting-started"><span class="glyphicon glyphicon-download"></span> Source on GitHub</a>
-  </div>
-</div>
 <div class="container">
-  <div class="alert alert-info text-center" role="alert">
-    To deploy your own copy, and learn the fundamentals of the Heroku platform, head over to the <a href="https://devcenter.heroku.com/articles/getting-started-with-nodejs" class="alert-link">Getting Started with Node on Heroku</a> tutorial.
-  </div>
-  <hr>
-  <div class="row">
-    <div class="col-md-6">
-      <h3><span class="glyphicon glyphicon-info-sign"></span> How this sample app works</h3>
-      <ul>
-        <li>This app was deployed to Heroku, either using Git or by using <a href="https://github.com/heroku/node-js-getting-started">Heroku Button</a> on the repository.</li>
+	<h1 class="row">Github Repo Searcher</h1>
 
-        <li>When Heroku received the source code, it fetched all the dependencies in the <a href="https://github.com/heroku/node-js-getting-started/blob/master/package.json">package.json</a>, creating a deployable slug.</li>
-        <li>The platform then spins up a dyno, a lightweight container that provides an isolated environment in which the slug can be mounted and executed.</li>
-        <li>You can scale your app, manage it, and deploy over <a href="https://addons.heroku.com/">150 add-on services</a>, from the Dashboard or CLI.</li>
-      </ul>
-    </div>
-    <div class="col-md-6">
-      <h3><span class="glyphicon glyphicon-link"></span> Next Steps</h3>
-      <ul>
-        <li>If you are following the <a href="https://devcenter.heroku.com/articles/getting-started-with-nodejs">Getting Started</a> guide, then please head back to the tutorial and follow the next steps!</li>
-        <li>If you deployed this app by deploying the Heroku Button, then in a command line shell, run:</li>
-        <ul>
-          <li><code>git clone https://github.com/heroku/node-js-getting-started.git</code> - this will create a local copy of the source code for the app</li>
-          <li><code>cd node-js-getting-started</code> - change directory into the local source code repository</li>
-          <li><code>heroku git:remote -a &lt;your-app-name></code> - associate the Heroku app with the repository</li>
-          <li>You'll now be set up to run the app locally, or <a href="https://devcenter.heroku.com/articles/getting-started-with-nodejs#push-local-changes">deploy changes</a> to Heroku</li>
-        </ul>
-      </ul>
-      <h3><span class="glyphicon glyphicon-link"></span> Helpful Links</h3>
-      <ul>
-        <li><a href="https://www.heroku.com/home">Heroku</a></li>
-        <li><a href="https://devcenter.heroku.com/">Heroku Dev Center</a></li>
-        <li><a href="https://devcenter.heroku.com/articles/getting-started-with-nodejs">Getting Started with Node on Heroku</a></li>
-        <li><a href="https://devcenter.heroku.com/articles/deploying-nodejs">Deploying Node Apps on Heroku</a></li>
-      </ul>
-    </div>
-  </div> <!-- row -->
-   <div class="alert alert-info text-center" role="alert">
-    Please do work through the Getting Started guide, even if you do know how to build such an application.  The guide covers the basics of working with Heroku, and will familiarize you with all the concepts you need in order to build and deploy your own apps.
-  </div>
+	<!-- Input field -->
+	<div class="row">
+		<div class="row user-input-group input-group">
+			<span class="input-group-addon" id="basic-addon1">@</span>
+			<input id="github-username-input" type="text" class="form-control" placeholder="Type Github Username" aria-describedby="basic-addon1">
+		</div>
+	</div>
+
+	<!-- User information... -->
+	<div class="row">
+		<!-- Avatar/profile image... -->
+		<div class="col-md-4">
+			<img id="profile-img" class="row" src="https://image.flaticon.com/icons/svg/118/118781.svg">
+			<p class="row"> <!-- attribution... -->
+				Placeholder icon made by <a href="https://www.flaticon.com/authors/lucy-g">CC 3.0 BY </a>
+				from <a href="https://www.flaticon.com/"> www.flaticon.com </a>
+			</p>
+		</div>
+		<!-- List of repos... -->
+		<div class="col-md-8">
+			<h3 id="repos-header">Repositories...</h3>
+			<ul id="repos-list" class="list-group">
+				<li class="list-group-item">Empty. Please enter username to populate</li>
+			</ul>
+		</div>
+	</div>
 </div>
-
 
 </body>
+
 </html>
