@@ -1,5 +1,4 @@
 # Heejung Chung, Way2B1 coding exercise 2017
-### Stanford class of '21
 
 ## Problem
 Create a page that finds and displays GitHub users' basic information.
